@@ -23,7 +23,7 @@ from prompt_toolkit.formatted_text import HTML
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.database.session import get_db
-from src.agent.main_agent import MainAgent
+from src.agent.memory_driven_agent import MemoryDrivenAgent
 from src.utils.cli_colors import (
     format_assistant_prefix, format_thinking_prefix,
     format_tool_call, format_tool_success, format_tool_error,
@@ -144,7 +144,7 @@ class ChatInterface:
         # Initialize database and agent
         async for db in get_db():
             self.db = db
-            self.agent = MainAgent(db, use_reasoner=self.use_reasoner)
+            self.agent = MemoryDrivenAgent(db, use_reasoner=self.use_reasoner)
 
             try:
                 while True:
