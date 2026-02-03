@@ -17,8 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.agent.state import AgentState, get_session_manager
 from src.infrastructure.llm.deepseek_client import DeepSeekClient
 from src.core.memory.embedding_service import EmbeddingService
-from src.core.memory.memory_service import MemoryService
-from src.core.memory.compression_service import CompressionService
 from src.core.memory.online_memory_adapter import OnlineMemoryAdapter
 from src.core.skills.skill_service import SkillService
 from src.core.skills.filter_service import FilterService
@@ -44,19 +42,14 @@ class MemoryDrivenAgent:
 
         # 服务层
         self.embedding_service = EmbeddingService()
-        self.memory_service = MemoryService(db)
-        self.compression_service = CompressionService(db)
         self.skill_service = SkillService(db)
         self.filter_service = FilterService()
 
-        # 线上记忆适配器（冗余挂载）
+        # 线上记忆适配器
         self.online_memory_adapter = OnlineMemoryAdapter(enabled=True)
 
         # 工具注册表
         self.tool_registry = get_tool_registry()
-
-        # 配置
-        self.compression_threshold = 15  # 对话压缩阈值
 
     async def process_message(
         self,
@@ -98,15 +91,7 @@ class MemoryDrivenAgent:
         tracker.end_sync_step("初始化会话")
 
         try:
-            # 1. 检查是否需要压缩
-            tracker.start_sync_step("检查对话压缩")
-            if progress_callback is not None:
-                progress_value, desc = tracker.get_progress()
-                progress_callback(progress_value, desc)
-            await self._check_and_compress(state)
-            tracker.end_sync_step("检查对话压缩")
-
-            # 2. 生成 query embedding
+            # 1. 生成 query embedding
             tracker.start_sync_step("生成查询向量")
             if progress_callback is not None:
                 progress_value, desc = tracker.get_progress()
@@ -114,40 +99,57 @@ class MemoryDrivenAgent:
             query_embedding = await self.embedding_service.generate(user_message)
             tracker.end_sync_step("生成查询向量")
 
-            # 3. 并行检索 skills 和 facts
-            tracker.start_sync_step("检索技能和记忆")
+            # 2. 检索 skills
+            tracker.start_sync_step("检索技能")
             if progress_callback is not None:
                 progress_value, desc = tracker.get_progress()
                 progress_callback(progress_value, desc)
             candidate_skills = await self.skill_service.retrieve_skills(
                 query_embedding, top_k=3
             )
-            candidate_facts = await self.memory_service.retrieve_memories(
-                query=user_message, top_k=10
-            )
-            tracker.end_sync_step("检索技能和记忆")
+            tracker.end_sync_step("检索技能")
 
-            # 3.5 & 4. 【并行优化】同时执行线上记忆召回和 LLM 过滤
+            # 3. 【并行优化】同时执行线上记忆召回和 LLM 过滤 skills
             tracker.start_async_step("线上记忆召回")
-            tracker.start_sync_step("LLM过滤技能和记忆")
+            tracker.start_sync_step("LLM过滤技能")
             if progress_callback is not None:
                 progress_value, desc = tracker.get_progress()
                 progress_callback(progress_value, desc)
 
-            # 并行执行两个任务
-            online_memories, filter_result = await asyncio.gather(
-                self.online_memory_adapter.recall_memories(query=user_message, top_k=5),
-                self.filter_service.filter_skills_and_facts(
-                    user_query=user_message,
-                    candidate_skills=candidate_skills,
-                    candidate_facts=candidate_facts.get('facts', [])
+            # 并行执行两个任务（带异常处理）
+            try:
+                online_memories, filter_result = await asyncio.gather(
+                    self.online_memory_adapter.recall_memories(query=user_message, top_k=5),
+                    self.filter_service.filter_skills_and_facts(
+                        user_query=user_message,
+                        candidate_skills=candidate_skills,
+                        candidate_facts=[]  # 不再使用本地 facts
+                    )
                 )
-            )
+                tracker.end_async_step("线上记忆召回")
+                tracker.end_sync_step("LLM过滤技能")
+            except Exception as e:
+                # 如果线上记忆召回失败，使用空列表继续
+                print(f"⚠️ 线上记忆召回或过滤失败: {e}")
+                tracker.end_async_step("线上记忆召回", error=str(e))
 
-            tracker.end_async_step("线上记忆召回")
-            tracker.end_sync_step("LLM过滤技能和记忆")
+                # 重新执行 LLM 过滤（如果失败的话）
+                try:
+                    filter_result = await self.filter_service.filter_skills_and_facts(
+                        user_query=user_message,
+                        candidate_skills=candidate_skills,
+                        candidate_facts=[]
+                    )
+                    tracker.end_sync_step("LLM过滤技能")
+                except Exception as filter_error:
+                    print(f"⚠️ LLM 过滤失败: {filter_error}")
+                    tracker.end_sync_step("LLM过滤技能", error=str(filter_error))
+                    # 使用默认值
+                    filter_result = {"skill_id": None, "fact_ids": []}
 
-            # 5. 根据 skill_id 获取工具集和 prompt
+                online_memories = []
+
+            # 4. 根据 skill_id 获取工具集和 prompt
             tracker.start_sync_step("准备工具和Prompt")
             if progress_callback is not None:
                 progress_value, desc = tracker.get_progress()
@@ -163,16 +165,12 @@ class MemoryDrivenAgent:
             if not tools:
                 tools = self.tool_registry.get_default_tools()
 
-            # 6. 根据 fact_ids 获取记忆
-            facts = await self.memory_service.get_facts_by_ids(filter_result["fact_ids"])
-
-            # 7. 构建 messages（包含线上记忆）
-            messages = self._build_messages(state, skill_prompt, facts, online_memories)
+            # 5. 构建 messages（只使用线上记忆）
+            messages = self._build_messages(state, skill_prompt, online_memories)
 
             # 记录上下文内容到 tracker
             tracker.set_context_content({
                 "skill_prompt": skill_prompt,
-                "local_facts": facts,
                 "online_memories": online_memories,
                 "conversation_history": [
                     {"role": msg.role, "content": msg.content[:200] + "..." if len(msg.content) > 200 else msg.content}
@@ -252,23 +250,21 @@ class MemoryDrivenAgent:
         self,
         state: AgentState,
         skill_prompt: str,
-        facts: List[Dict[str, Any]],
         online_memories: List[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
-        构建消息历史（包含 system prompt + 记忆）
+        构建消息历史（包含 system prompt + 线上记忆）
 
         Args:
             state: 会话状态
             skill_prompt: 技能 prompt
-            facts: 检索到的记忆
-            online_memories: 线上记忆召回的记忆（冗余挂载）
+            online_memories: 线上记忆召回的记忆
 
         Returns:
             消息列表
         """
         # 构建 system prompt（包含线上记忆）
-        system_prompt = self._build_system_prompt(skill_prompt, facts, online_memories)
+        system_prompt = self._build_system_prompt(skill_prompt, online_memories)
 
         # 构建消息列表
         messages = [{"role": "system", "content": system_prompt}]
@@ -285,7 +281,6 @@ class MemoryDrivenAgent:
     def _build_system_prompt(
         self,
         skill_prompt: str,
-        facts: List[Dict[str, Any]],
         online_memories: List[Dict[str, Any]] = None
     ) -> str:
         """
@@ -293,7 +288,6 @@ class MemoryDrivenAgent:
 
         Args:
             skill_prompt: 技能 prompt
-            facts: 检索到的记忆
             online_memories: 线上记忆召回的记忆
 
         Returns:
@@ -301,11 +295,9 @@ class MemoryDrivenAgent:
         """
         from src.core.agent.prompts import build_agent_prompt
 
-        # 合并本地记忆和线上记忆
-        all_facts = facts.copy() if facts else []
-
+        # 将线上记忆转换为 facts 格式
+        all_facts = []
         if online_memories:
-            # 将线上记忆转换为 facts 格式
             for mem in online_memories:
                 all_facts.append({
                     "fact_text": mem["content"],
@@ -471,40 +463,3 @@ class MemoryDrivenAgent:
 
         return results
 
-    async def _check_and_compress(self, state: AgentState) -> None:
-        """
-        检查是否需要压缩对话历史
-
-        Args:
-            state: 会话状态
-        """
-        try:
-            # 获取当前对话历史
-            conversation_history = []
-            for msg in state.conversation_history:
-                conversation_history.append({
-                    "role": msg.role,
-                    "content": msg.content
-                })
-
-            # 检查是否需要压缩
-            if self.compression_service.should_compact(
-                conversation_history,
-                threshold=self.compression_threshold
-            ):
-                print(f"对话历史达到 {len(conversation_history)} 轮，触发压缩...")
-
-                # 执行压缩
-                result = await self.compression_service.compact_and_memorize(
-                    conversation_history=conversation_history,
-                    session_id=str(state.session_id)
-                )
-
-                print(f"压缩完成: 写入 {result['sources_written']} 条对话，提取 {result['facts_extracted']} 个事实")
-
-                # 清理旧的对话历史，只保留最近 5 轮
-                state.conversation_history = state.conversation_history[-5:]
-
-        except Exception as e:
-            # 压缩失败不应该影响主流程
-            print(f"对话压缩失败: {e}")

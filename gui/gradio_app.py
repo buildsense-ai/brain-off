@@ -161,30 +161,16 @@ def format_context_content(request_id: str = None) -> str:
     else:
         output += "#### 🎯 技能 Prompt\n\n无\n\n"
 
-    # 2. 本地记忆
-    output += "#### 💾 本地记忆 (Local Facts)\n\n"
-    local_facts = ctx.get("local_facts", [])
-    if local_facts:
-        output += f"共 {len(local_facts)} 条记忆:\n\n"
-        for i, fact in enumerate(local_facts[:5], 1):  # 只显示前5条
-            content = fact.get("content", "")
-            output += f"{i}. {content[:100]}...\n" if len(content) > 100 else f"{i}. {content}\n"
-        if len(local_facts) > 5:
-            output += f"\n... 还有 {len(local_facts) - 5} 条记忆\n"
-    else:
-        output += "无\n"
-    output += "\n"
-
-    # 3. GauzMem 记忆
-    output += "#### 🌐 GauzMem 记忆\n\n"
-    gauz_memories = ctx.get("gauz_memories", [])
-    if gauz_memories:
-        output += f"共 {len(gauz_memories)} 条记忆:\n\n"
-        for i, mem in enumerate(gauz_memories[:5], 1):  # 只显示前5条
+    # 2. 线上记忆
+    output += "#### 🌐 线上记忆\n\n"
+    online_memories = ctx.get("online_memories", [])
+    if online_memories:
+        output += f"共 {len(online_memories)} 条记忆:\n\n"
+        for i, mem in enumerate(online_memories[:5], 1):  # 只显示前5条
             content = mem.get("content", mem.get("text", ""))
             output += f"{i}. {content[:100]}...\n" if len(content) > 100 else f"{i}. {content}\n"
-        if len(gauz_memories) > 5:
-            output += f"\n... 还有 {len(gauz_memories) - 5} 条记忆\n"
+        if len(online_memories) > 5:
+            output += f"\n... 还有 {len(online_memories) - 5} 条记忆\n"
     else:
         output += "无\n"
     output += "\n"
