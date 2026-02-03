@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import Task, TaskTag
+from src.infrastructure.database.models import Task, TaskTag
 from src.repositories.base import BaseRepository
 
 

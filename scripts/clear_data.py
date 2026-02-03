@@ -5,7 +5,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 
-from src.config import settings
+from src.infrastructure.config import settings
 
 
 async def clear_all_data():

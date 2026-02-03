@@ -6,7 +6,7 @@ PYTHONPATH=/Users/zhuhanyuan/Documents/chatbot python scripts/test_memory_system
 """
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database.connection import engine
+from src.infrastructure.database.connection import engine
 from src.services.memory_service import MemoryService
 from src.services.compression_service import CompressionService
 

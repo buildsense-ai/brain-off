@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import Tag
+from src.infrastructure.database.models import Tag
 from src.repositories.base import BaseRepository
 
 

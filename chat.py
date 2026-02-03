@@ -22,9 +22,9 @@ from prompt_toolkit.formatted_text import HTML
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.database.session import get_db
-from src.agent.memory_driven_agent import MemoryDrivenAgent
-from src.utils.cli_colors import (
+from src.infrastructure.database.session import get_db
+from src.core.agent.memory_driven_agent import MemoryDrivenAgent
+from src.infrastructure.utils.cli_colors import (
     format_assistant_prefix, format_thinking_prefix,
     format_tool_call, format_tool_success, format_tool_error,
     Colors, dim, draw_separator

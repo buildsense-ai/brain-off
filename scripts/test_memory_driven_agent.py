@@ -6,7 +6,7 @@ PYTHONPATH=/Users/zhuhanyuan/Documents/chatbot python scripts/test_memory_driven
 """
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database.connection import engine
+from src.infrastructure.database.connection import engine
 from src.agent.memory_driven_agent import MemoryDrivenAgent
 
 

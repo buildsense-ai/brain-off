@@ -7,8 +7,8 @@ from uuid import UUID
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import Task
-from src.services.embedding_service import get_embedding_service
+from src.infrastructure.database.models import Task
+from src.core.memory.embedding_service import EmbeddingService
 
 
 class SearchService:
@@ -16,7 +16,7 @@ class SearchService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.embedding_service = get_embedding_service()
+        self.embedding_service = EmbeddingService()
 
     async def search_tasks_semantic(
         self,

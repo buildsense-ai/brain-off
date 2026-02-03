@@ -7,7 +7,7 @@ PYTHONPATH=/Users/zhuhanyuan/Documents/chatbot python scripts/clear_database.py
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from src.database.connection import engine
+from src.infrastructure.database.connection import engine
 
 
 async def clear_all_data():
