@@ -18,6 +18,9 @@ env_path = Path(__file__).parent.parent.parent.parent / ".env.gauz"
 if env_path.exists():
     load_dotenv(env_path)
 
+# 导入调试工具
+from src.core.utils.debug import debug_print
+
 
 class OnlineMemoryAdapter:
     """线上记忆 API 适配器"""
@@ -38,7 +41,7 @@ class OnlineMemoryAdapter:
         self.base_url = self.base_url.rstrip("/")
 
         if self.enabled:
-            print(f"✅ 线上记忆适配器已启用 (URL: {self.base_url})")
+            debug_print(f"✅ 线上记忆适配器已启用 (URL: {self.base_url})")
 
     async def recall_memories(
         self,
@@ -66,7 +69,7 @@ class OnlineMemoryAdapter:
         overall_start = time.time()
 
         try:
-            print(f"🔍 [OnlineMemory] 开始召回记忆 (query={query[:50]}..., top_k={top_k})")
+            debug_print(f"🔍 [OnlineMemory] 开始召回记忆 (query={query[:50]}..., top_k={top_k})")
 
             # 构建请求体
             request_body = {
@@ -107,30 +110,30 @@ class OnlineMemoryAdapter:
                     data = await response.json()
 
             api_duration = time.time() - api_start
-            print(f"  ⏱️  API 调用耗时: {api_duration:.2f}s")
+            debug_print(f"  ⏱️  API 调用耗时: {api_duration:.2f}s")
 
             # 解析响应
             convert_start = time.time()
             result = self._parse_bundle_response(data)
             convert_duration = time.time() - convert_start
-            print(f"  ⏱️  数据转换耗时: {convert_duration:.3f}s")
+            debug_print(f"  ⏱️  数据转换耗时: {convert_duration:.3f}s")
 
             overall_duration = time.time() - overall_start
-            print(f"✅ 线上记忆召回 {len(result)} 条记忆 (总耗时: {overall_duration:.2f}s)")
+            debug_print(f"✅ 线上记忆召回 {len(result)} 条记忆 (总耗时: {overall_duration:.2f}s)")
 
             # 性能警告
             if api_duration > 10:
-                print(f"⚠️  [性能警告] API 调用耗时过长: {api_duration:.2f}s")
+                debug_print(f"⚠️  [性能警告] API 调用耗时过长: {api_duration:.2f}s")
 
             return result
 
         except asyncio.TimeoutError:
             overall_duration = time.time() - overall_start
-            print(f"⏳ 线上记忆召回超时 - 耗时: {overall_duration:.2f}s")
+            debug_print(f"⏳ 线上记忆召回超时 - 耗时: {overall_duration:.2f}s")
             return []
         except Exception as e:
             overall_duration = time.time() - overall_start
-            print(f"⚠️ 线上记忆召回失败: {e} - 耗时: {overall_duration:.2f}s")
+            debug_print(f"⚠️ 线上记忆召回失败: {e} - 耗时: {overall_duration:.2f}s")
             return []
 
     def _parse_bundle_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -268,12 +271,12 @@ class OnlineMemoryAdapter:
 
                     data = await response.json()
 
-            print(f"✅ 线上记忆存储消息: chunk_id={data.get('chunk_id')}, task_id={data.get('task_id')}")
+            debug_print(f"✅ 线上记忆存储消息: chunk_id={data.get('chunk_id')}, task_id={data.get('task_id')}")
             return data
 
         except asyncio.TimeoutError:
-            print(f"⏳ 线上记忆存储超时（后台处理中）")
+            debug_print(f"⏳ 线上记忆存储超时（后台处理中）")
             return {"status": "timeout"}
         except Exception as e:
-            print(f"⚠️ 线上记忆存储失败: {e}")
+            debug_print(f"⚠️ 线上记忆存储失败: {e}")
             return None

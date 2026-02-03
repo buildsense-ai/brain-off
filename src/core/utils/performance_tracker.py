@@ -7,6 +7,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import uuid4
 
+# 导入调试工具
+from src.core.utils.debug import debug_print
+
 
 @dataclass
 class Step:
@@ -71,7 +74,7 @@ class PerformanceTracker:
         step = Step(name=name, status="in_progress", start_time=time.time())
         self.block.sync_steps.append(step)
         self._current_sync_step = step
-        print(f"⏱️  [{self.request_id}] 开始: {name}")
+        debug_print(f"⏱️  [{self.request_id}] 开始: {name}")
 
     def end_sync_step(self, name: str, error: Optional[str] = None):
         """结束一个同步步骤"""
@@ -83,7 +86,7 @@ class PerformanceTracker:
                 step.error = error
 
                 status_icon = "❌" if error else "✅"
-                print(f"{status_icon} [{self.request_id}] {name}: {step.duration:.2f}s")
+                debug_print(f"{status_icon} [{self.request_id}] {name}: {step.duration:.2f}s")
                 break
 
     def start_async_step(self, name: str):
@@ -91,7 +94,7 @@ class PerformanceTracker:
         step = Step(name=name, status="in_progress", start_time=time.time())
         self.block.async_steps.append(step)
         self._current_async_steps[name] = step
-        print(f"⏱️  [{self.request_id}] 异步开始: {name}")
+        debug_print(f"⏱️  [{self.request_id}] 异步开始: {name}")
 
     def end_async_step(self, name: str, error: Optional[str] = None):
         """结束一个异步步骤"""
@@ -103,7 +106,7 @@ class PerformanceTracker:
                 step.error = error
 
                 status_icon = "❌" if error else "✅"
-                print(f"{status_icon} [{self.request_id}] 异步完成: {name}: {step.duration:.2f}s")
+                debug_print(f"{status_icon} [{self.request_id}] 异步完成: {name}: {step.duration:.2f}s")
 
                 if name in self._current_async_steps:
                     del self._current_async_steps[name]
@@ -140,8 +143,8 @@ class PerformanceTracker:
 
             return progress, desc
         except Exception as e:
-            print(f"❌ get_progress error: {e}")
-            print(f"   sync_steps: {self.block.sync_steps}")
+            debug_print(f"❌ get_progress error: {e}")
+            debug_print(f"   sync_steps: {self.block.sync_steps}")
             return 0.0, "🔄 处理中..."
 
     def set_context_content(self, context_content: Dict[str, Any]):
@@ -163,9 +166,9 @@ class PerformanceTracker:
 
         # 打印总结
         status_icon = "❌" if error else "✅"
-        print(f"\n{status_icon} [{self.request_id}] 请求完成")
-        print(f"📊 总耗时: {self.block.total_duration:.2f}s")
-        print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+        debug_print(f"\n{status_icon} [{self.request_id}] 请求完成")
+        debug_print(f"📊 总耗时: {self.block.total_duration:.2f}s")
+        debug_print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
     def get_summary(self) -> Dict[str, Any]:
         """获取当前请求的摘要"""
@@ -215,4 +218,4 @@ class PerformanceTracker:
     def clear_history(cls):
         """清除历史记录"""
         cls._all_requests.clear()
-        print("🗑️  性能追踪历史已清除")
+        debug_print("🗑️  性能追踪历史已清除")

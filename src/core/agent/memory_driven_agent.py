@@ -22,6 +22,7 @@ from src.core.skills.skill_service import SkillService
 from src.core.skills.filter_service import FilterService
 from src.core.skills.tool_registry import get_tool_registry
 from src.core.utils.performance_tracker import PerformanceTracker
+from src.core.utils.debug import debug_print
 
 
 class MemoryDrivenAgent:
@@ -130,7 +131,7 @@ class MemoryDrivenAgent:
                 tracker.end_sync_step("LLM过滤技能")
             except Exception as e:
                 # 如果线上记忆召回失败，使用空列表继续
-                print(f"⚠️ 线上记忆召回或过滤失败: {e}")
+                debug_print(f"⚠️ 线上记忆召回或过滤失败: {e}")
                 tracker.end_async_step("线上记忆召回", error=str(e))
 
                 # 重新执行 LLM 过滤（如果失败的话）
@@ -142,7 +143,7 @@ class MemoryDrivenAgent:
                     )
                     tracker.end_sync_step("LLM过滤技能")
                 except Exception as filter_error:
-                    print(f"⚠️ LLM 过滤失败: {filter_error}")
+                    debug_print(f"⚠️ LLM 过滤失败: {filter_error}")
                     tracker.end_sync_step("LLM过滤技能", error=str(filter_error))
                     # 使用默认值
                     filter_result = {"skill_id": None, "fact_ids": []}
@@ -341,7 +342,7 @@ class MemoryDrivenAgent:
 
             # 检查响应是否有效
             if not response.choices or len(response.choices) == 0:
-                print(f"⚠️  LLM 返回空响应，终止循环")
+                debug_print(f"⚠️  LLM 返回空响应，终止循环")
                 break
 
             # 提取响应内容
