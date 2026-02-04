@@ -257,15 +257,16 @@ def extract_cad_entities(
         }
 
 
-def list_files(working_folder: str) -> Dict[str, Any]:
+def list_files(working_folder: str, recursive: bool = False) -> Dict[str, Any]:
     """
-    列出 working folder 中的所有文件
+    列出 working folder 中的所有文件和文件夹
 
     Args:
         working_folder: 工作文件夹路径
+        recursive: 是否递归列出子文件夹中的文件
 
     Returns:
-        文件列表
+        文件和文件夹列表
     """
     try:
         import os
@@ -286,20 +287,44 @@ def list_files(working_folder: str) -> Dict[str, Any]:
             }
 
         files = []
-        for item in folder_path.iterdir():
-            if item.is_file():
-                files.append({
-                    "name": item.name,
-                    "size": item.stat().st_size,
-                    "modified": item.stat().st_mtime
-                })
+        directories = []
+
+        if recursive:
+            # 递归列出所有文件
+            for item in folder_path.rglob("*"):
+                if item.is_file():
+                    relative_path = item.relative_to(folder_path)
+                    files.append({
+                        "name": item.name,
+                        "path": str(relative_path),
+                        "size": item.stat().st_size,
+                        "modified": item.stat().st_mtime
+                    })
+        else:
+            # 只列出当前目录
+            for item in folder_path.iterdir():
+                if item.is_file():
+                    files.append({
+                        "name": item.name,
+                        "type": "file",
+                        "size": item.stat().st_size,
+                        "modified": item.stat().st_mtime
+                    })
+                elif item.is_dir():
+                    directories.append({
+                        "name": item.name,
+                        "type": "directory",
+                        "modified": item.stat().st_mtime
+                    })
 
         return {
             "success": True,
             "data": {
                 "folder": str(folder_path),
                 "files": files,
-                "count": len(files)
+                "directories": directories,
+                "file_count": len(files),
+                "directory_count": len(directories)
             }
         }
 
@@ -576,13 +601,18 @@ KIMI_AGENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "list_files",
-            "description": "列出工作文件夹中的所有文件。用于查看当前有哪些文件可用。",
+            "description": "列出工作文件夹中的所有文件和子文件夹。用于查看当前有哪些文件和目录可用。支持递归列出所有子目录中的文件。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "working_folder": {
                         "type": "string",
                         "description": "工作文件夹路径"
+                    },
+                    "recursive": {
+                        "type": "boolean",
+                        "description": "是否递归列出所有子文件夹中的文件，默认 false",
+                        "default": False
                     }
                 },
                 "required": ["working_folder"]

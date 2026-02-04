@@ -75,6 +75,7 @@ def render_drawing_region(
     """
     try:
         import ezdxf
+        import gc  # 用于垃圾回收
 
         if not os.path.exists(file_path):
             return {"success": False, "error": f"文件不存在: {file_path}"}
@@ -117,7 +118,11 @@ def render_drawing_region(
         # 保存
         plt.tight_layout(pad=0)
         plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0, facecolor='white')
-        plt.close()
+
+        # 显式清理内存
+        plt.close(fig)  # 关闭特定 figure
+        plt.close('all')  # 确保关闭所有 figure
+        gc.collect()  # 强制垃圾回收
 
         # 计算缩放比例
         scale = actual_width / bbox['width']
@@ -133,6 +138,13 @@ def render_drawing_region(
     except ImportError:
         return {"success": False, "error": "需要安装 ezdxf 和 matplotlib"}
     except Exception as e:
+        # 异常时也要清理内存
+        try:
+            plt.close('all')
+            import gc
+            gc.collect()
+        except:
+            pass
         return {"success": False, "error": f"渲染失败: {str(e)}"}
 
 

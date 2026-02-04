@@ -1,8 +1,8 @@
 {
-  "id": "cost",
-  "name": "工程造价分析",
+  "id": "supervision",
+  "name": "工程监理审核",
   "version": "1.0.0",
-  "description": "专业的建筑CAD图纸分析和工程量清单生成工具",
+  "description": "专业的建筑图纸审核和工程方案分析工具，提供合规性检查和合理化建议",
   "tools": [
     "get_cad_metadata",
     "get_cad_regions",
@@ -22,7 +22,7 @@
   },
   "enabled": true,
   "workspace": {
-    "working_directory": "workspace/cost",
+    "working_directory": "workspace/supervision",
     "shared_directory": "workspace/shared",
     "subdirs": {
       "projects": "projects",
@@ -34,7 +34,7 @@
   "metadata": {
     "author": "System",
     "created_at": "2026-02-04",
-    "tags": ["cad", "construction", "cost-estimation", "bim"],
+    "tags": ["cad", "construction", "supervision", "review", "compliance"],
     "requires_vision": true,
     "env_vars": [
       "VISION_MODEL_API_KEY",

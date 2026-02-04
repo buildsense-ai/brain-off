@@ -27,6 +27,7 @@ class SkillConfig:
     description: Optional[str] = None
     model: Optional[Dict[str, Any]] = None
     enabled: bool = True
+    workspace: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -90,10 +91,9 @@ class FileSystemSkillLoader:
 
     def _create_skill_object(self, config: SkillConfig, prompt_template: str) -> Skill:
         """Create a Skill object from config and prompt"""
-        # Generate embedding if service is available
+        # Skip embedding generation for now (not needed for fixed skill mode)
+        # TODO: Add async version if embedding is needed
         embedding = None
-        if self.embedding_service:
-            embedding = self.embedding_service.generate(prompt_template)
 
         # Create Skill object (matches database model structure)
         skill = Skill(

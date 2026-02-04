@@ -89,7 +89,16 @@ class ToolRegistry:
         tool_function = self.tools[tool_name]["function"]
 
         try:
-            result = await tool_function(db, **kwargs)
+            # 检查工具函数是否需要 db 参数
+            import inspect
+            sig = inspect.signature(tool_function)
+            needs_db = 'db' in sig.parameters
+
+            if needs_db:
+                result = await tool_function(db, **kwargs)
+            else:
+                result = await tool_function(**kwargs) if inspect.iscoroutinefunction(tool_function) else tool_function(**kwargs)
+
             return {"success": True, "data": result}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -117,6 +126,15 @@ class ToolRegistry:
         visualization = self.tools[tool_name].get("visualization")
         if not visualization:
             return f"[调用工具: {tool_name}]"
+
+        # 通用模板处理（适用于大多数工具）
+        if isinstance(visualization, dict) and stage in visualization:
+            template = visualization[stage]
+            try:
+                return template.format(**arguments)
+            except (KeyError, ValueError):
+                # 如果格式化失败，返回模板本身
+                return template
 
         # 对于 database_operation，获取操作特定的模板
         if tool_name == "database_operation":

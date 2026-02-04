@@ -195,8 +195,41 @@ def format_thinking_prefix() -> str:
 
 
 def format_tool_call(text: str) -> str:
-    """格式化工具调用"""
-    return colorize(text, Theme.TOOL_CALL)
+    """
+    格式化工具调用，将技术名称转换为友好提示
+
+    Args:
+        text: 工具调用文本，格式如 "extract_cad_entities" 或 "🔧 extract_cad_entities"
+
+    Returns:
+        友好的工具调用提示
+    """
+    # 工具名称到友好名称的映射
+    FRIENDLY_NAMES = {
+        "extract_cad_entities": "提取实体数据",
+        "calculate_cad_measurements": "计算工程量",
+        "analyze_drawing_visual": "分析图纸",
+        "extract_drawing_annotations": "提取标注信息",
+        "convert_cad_to_image": "渲染图纸",
+        "load_cad_file": "加载CAD文件",
+        "convert_dwg_to_dxf": "转换文件格式",
+        "create_boq_item": "创建工程量清单",
+        "search_quota_standard": "查询定额标准",
+        "export_boq_to_excel": "导出Excel报表",
+    }
+
+    # 提取工具名称（去除可能的 emoji 和参数）
+    tool_name = text.strip()
+    if "(" in tool_name:
+        tool_name = tool_name.split("(")[0].strip()
+
+    # 查找友好名称
+    friendly_name = FRIENDLY_NAMES.get(tool_name, tool_name)
+
+    # 格式化输出
+    formatted_text = f"🔧 {friendly_name}..."
+
+    return colorize(formatted_text, Theme.TOOL_CALL)
 
 
 def format_tool_success(text: str) -> str:

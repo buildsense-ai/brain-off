@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.agent.state import AgentState, get_session_manager
 from src.infrastructure.llm.deepseek_client import DeepSeekClient
+from src.infrastructure.llm.unified_client import create_llm_client
 from src.core.memory.embedding_service import EmbeddingService
 from src.core.memory.online_memory_adapter import OnlineMemoryAdapter
 from src.core.skills.skill_service import SkillService
@@ -38,10 +39,10 @@ class MemoryDrivenAgent:
             fixed_skill_id: 固定使用的 skill ID，如果提供则跳过 LLM 自动选择
         """
         self.db = db
-        self.llm_client = DeepSeekClient(use_reasoner=use_reasoner)
         self.session_manager = get_session_manager()
         self.max_iterations = 20
         self.fixed_skill_id = fixed_skill_id
+        self.use_reasoner = use_reasoner
 
         # 服务层
         self.embedding_service = EmbeddingService()
@@ -53,6 +54,25 @@ class MemoryDrivenAgent:
 
         # 工具注册表
         self.tool_registry = get_tool_registry()
+
+        # LLM 客户端（延迟初始化，根据 skill 配置）
+        self.llm_client = None
+
+    def _initialize_llm_client(self, skill_config: Optional[Dict[str, Any]] = None):
+        """
+        根据 skill 配置初始化 LLM 客户端
+
+        Args:
+            skill_config: skill 配置（包含 model 和 metadata）
+        """
+        self.llm_client = create_llm_client(
+            skill_config=skill_config,
+            use_reasoner=self.use_reasoner
+        )
+
+        # 打印使用的模型信息
+        provider = "Kimi" if self.llm_client.supports_vision else "DeepSeek"
+        debug_print(f"[Agent] 使用模型: {provider} ({self.llm_client.model})")
 
     async def process_message(
         self,
@@ -129,6 +149,14 @@ class MemoryDrivenAgent:
 
                 debug_print(f"[DEBUG] 使用固定 skill: {selected_skill.name} (ID: {selected_skill.id})")
                 filter_result = {"skill_id": self.fixed_skill_id, "fact_ids": [], "reasoning": "使用固定 skill 模式"}
+
+                # 初始化 LLM 客户端（根据 skill 配置）
+                skill_config = {
+                    "model": selected_skill.model_config,
+                    "metadata": selected_skill.metadata
+                }
+                self._initialize_llm_client(skill_config)
+
                 tracker.end_sync_step("加载固定技能")
 
                 # 仍然执行线上记忆召回
@@ -201,11 +229,21 @@ class MemoryDrivenAgent:
                 progress_callback(progress_value, desc)
             skill_prompt = ""
             tools = []
+            skill_config = None
+
             if filter_result["skill_id"]:
                 skill = await self.skill_service.get_skill_by_id(filter_result["skill_id"])
                 if skill:
                     tools = self.tool_registry.get_tools_by_names(skill.tool_set)
                     skill_prompt = skill.prompt_template
+                    skill_config = {
+                        "model": skill.model_config,
+                        "metadata": skill.metadata
+                    }
+
+            # 初始化 LLM 客户端（如果还未初始化）
+            if self.llm_client is None:
+                self._initialize_llm_client(skill_config)
 
             if not tools:
                 tools = self.tool_registry.get_default_tools()
@@ -418,7 +456,7 @@ class MemoryDrivenAgent:
                 })
 
             # 添加助手消息到消息列表
-            messages.append({
+            assistant_message = {
                 "role": "assistant",
                 "content": content,
                 "tool_calls": [
@@ -432,7 +470,13 @@ class MemoryDrivenAgent:
                     }
                     for tc in tool_calls
                 ]
-            })
+            }
+
+            # 如果响应包含 reasoning_content（Kimi k2.5），保留它
+            if hasattr(response.choices[0].message, 'reasoning_content') and response.choices[0].message.reasoning_content:
+                assistant_message["reasoning_content"] = response.choices[0].message.reasoning_content
+
+            messages.append(assistant_message)
 
             # 添加工具结果消息
             for tool_call, result in zip(tool_calls, tool_results):

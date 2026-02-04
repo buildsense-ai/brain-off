@@ -5,6 +5,7 @@
 """
 from src.skills.todo.setup import initialize_todo_tools
 from src.skills.cost.setup import initialize_cost_tools
+from src.skills.supervision.setup import initialize_supervision_tools
 
 
 def initialize_all_tools():
@@ -21,5 +22,12 @@ def initialize_all_tools():
         print("  ✅ Cost Skill 工具已加载")
     except Exception as e:
         print(f"  ⚠️  Cost Skill 加载失败: {e}")
+
+    # 初始化 Supervision Skill
+    try:
+        initialize_supervision_tools()
+        print("  ✅ Supervision Skill 工具已加载")
+    except Exception as e:
+        print(f"  ⚠️  Supervision Skill 加载失败: {e}")
 
     print("✅ 工具初始化完成\n")

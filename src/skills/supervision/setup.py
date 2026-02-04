@@ -1,22 +1,23 @@
 """
-Cost Skill 工具初始化
+Supervision Skill 工具初始化
 
-将 skills-dev/cost 的 Kimi Agent 工具注册到主系统的 ToolRegistry
+将 skills-dev/supervision 的工具注册到主系统的 ToolRegistry
 """
 import sys
 import os
 from pathlib import Path
 
-# 添加 skills-dev/cost 到 Python 路径
-# __file__ 是 src/skills/cost/setup.py
-# parent.parent.parent 是项目根目录
+# 添加 skills-dev/supervision 到 Python 路径
 project_root = Path(__file__).parent.parent.parent.parent
-cost_skill_path = project_root / "skills-dev" / "cost"
-sys.path.insert(0, str(cost_skill_path))
+supervision_skill_path = project_root / "skills-dev" / "supervision"
+sys.path.insert(0, str(supervision_skill_path))
 
 from src.core.skills.tool_registry import get_tool_registry
 
-# 导入 Kimi Agent 工具函数
+# 导入工具函数（从 skills-dev/cost/services 导入，因为是共享的）
+cost_skill_path = project_root / "skills-dev" / "cost"
+sys.path.insert(0, str(cost_skill_path))
+
 from services.kimi_agent_tools import (
     get_cad_metadata,
     get_cad_regions,
@@ -44,23 +45,20 @@ def check_environment_variables():
             missing_vars.append(f"  - {var_name}: {description}")
 
     if missing_vars:
-        print("\n⚠️  [Cost Skill] 缺少必需的环境变量：")
+        print("\n⚠️  [Supervision Skill] 缺少必需的环境变量：")
         for var in missing_vars:
             print(var)
         print("\n请在 .env 文件中配置这些变量")
-        print("示例：")
-        print("  VISION_MODEL_API_KEY=your_kimi_api_key")
-        print("  VISION_MODEL_BASE_URL=https://api.moonshot.cn/v1\n")
         return False
 
     return True
 
 
-def initialize_cost_tools():
-    """初始化 Cost Skill 的 9 个 Kimi Agent 工具"""
+def initialize_supervision_tools():
+    """初始化 Supervision Skill 的 9 个工具"""
     # 检查环境变量
     if not check_environment_variables():
-        print("⚠️  [Cost Skill] 环境变量未配置，部分功能可能无法使用")
+        print("⚠️  [Supervision Skill] 环境变量未配置，部分功能可能无法使用")
 
     registry = get_tool_registry()
 
@@ -77,7 +75,7 @@ def initialize_cost_tools():
         "append_to_file": append_to_file
     }
 
-    # 工具可视化模板
+    # 工具可视化模板（与 cost skill 相同）
     tool_visualizations = {
         "list_files": {
             "calling": "查看文件 ({working_folder})",
@@ -122,22 +120,12 @@ def initialize_cost_tools():
                 visualization=tool_visualizations.get(tool_name)
             )
 
-    print(f"[Cost Skill] 已注册 {len(tool_functions)} 个工具")
+    print(f"[Supervision Skill] 已注册 {len(tool_functions)} 个工具")
     return registry
 
 
 def _convert_to_openai_schema(tool_def: dict) -> dict:
     """
     KIMI_AGENT_TOOLS 已经是 OpenAI 格式，直接返回
-
-    格式:
-    {
-        "type": "function",
-        "function": {
-            "name": "tool_name",
-            "description": "...",
-            "parameters": {...}
-        }
-    }
     """
     return tool_def

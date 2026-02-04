@@ -32,7 +32,8 @@ def convert_cad_to_image(
     file_path: str,
     output_format: str = "png",
     layers: Optional[list] = None,
-    render_mode: str = "regions"
+    render_mode: str = "regions",
+    max_regions: int = 2
 ) -> Dict[str, Any]:
     """
     将CAD文件转换为图片
@@ -42,11 +43,12 @@ def convert_cad_to_image(
         output_format: 输出格式（png/jpg/pdf）
         layers: 要显示的图层列表（可选）
         render_mode: 渲染模式 - "regions"(多个高密度区域) 或 "overview"(全图概览)
+        max_regions: 最多渲染的区域数量（默认2，避免内存过载）
 
     Returns:
         Dict包含：
         - success: bool
-        - data: {image_paths: [str], regions: [...], image_count: int}
+        - data: {images_dir: str, image_count: int, index_file: str}
         - error: str
     """
     try:
@@ -96,8 +98,8 @@ def convert_cad_to_image(
                 })
 
         else:  # render_mode == "regions"
-            # 渲染前5个高密度区域
-            regions = bounds_result["regions"][:5]
+            # 渲染前 max_regions 个高密度区域
+            regions = bounds_result["regions"][:max_regions]
 
             for i, region in enumerate(regions, 1):
                 result = render_drawing_region(
@@ -116,13 +118,31 @@ def convert_cad_to_image(
                         "image_path": result["image_path"]
                     })
 
+        # 保存索引文件
+        from pathlib import Path
+        import json
+
+        output_dir = Path(file_path).parent / "rendered"
+        index_file = output_dir / "index.json"
+
+        with open(index_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                "source_file": file_path,
+                "render_mode": render_mode,
+                "max_regions": max_regions,
+                "image_count": len(image_paths),
+                "regions": regions_info,
+                "bounds": bounds_result["bounds"]
+            }, f, ensure_ascii=False, indent=2)
+
+        # 只返回简要信息
         return {
             "success": True,
             "data": {
-                "image_paths": image_paths,
-                "regions": regions_info,
+                "images_dir": str(output_dir),
                 "image_count": len(image_paths),
-                "bounds": bounds_result["bounds"]
+                "index_file": str(index_file),
+                "image_paths": image_paths  # 保留路径列表供直接使用
             }
         }
 
@@ -149,7 +169,11 @@ def analyze_drawing_visual(
     Returns:
         Dict包含：
         - success: bool
-        - data: {analysis_text: str, structured_data: dict}
+        - data: {
+            analysis_file: str,  # 完整分析文件路径
+            summary: str,        # 简短摘要（<200字）
+            key_findings: list   # 关键发现
+          }
         - error: str
     """
     try:
@@ -199,12 +223,53 @@ def analyze_drawing_visual(
 
         analysis_text = response.choices[0].message.content
 
+        # 保存完整分析到文件
+        from pathlib import Path
+        from datetime import datetime
+
+        image_name = Path(image_path).stem
+        output_dir = Path("workspace/cost/notes")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        analysis_file = output_dir / f"visual_analysis_{image_name}_{timestamp}.md"
+
+        with open(analysis_file, 'w', encoding='utf-8') as f:
+            f.write(f"# 视觉分析报告\n\n")
+            f.write(f"**图片**: {image_path}\n")
+            f.write(f"**分析目标**: {analysis_goal}\n")
+            f.write(f"**详细程度**: {detail_level}\n")
+            f.write(f"**模型**: {model_name}\n")
+            f.write(f"**时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write("---\n\n")
+            f.write(analysis_text)
+
+        # 提取关键发现（前几行的要点）
+        lines = analysis_text.split('\n')
+        key_findings = []
+        for line in lines[:15]:
+            line = line.strip()
+            if line and (line.startswith('-') or line.startswith('•') or
+                        (len(line) > 0 and line[0].isdigit() and '.' in line[:3])):
+                clean_line = line.lstrip('-•0123456789. ').strip()
+                if clean_line:
+                    key_findings.append(clean_line)
+                if len(key_findings) >= 5:
+                    break
+
+        # 生成简短摘要
+        summary = analysis_text[:200].replace('\n', ' ').strip()
+        if len(analysis_text) > 200:
+            summary += "..."
+
         return {
             "success": True,
             "data": {
-                "analysis_text": analysis_text,
-                "model_used": model_name,
-                "image_path": image_path
+                "analysis_file": str(analysis_file),
+                "summary": summary,
+                "key_findings": key_findings,
+                "full_length": len(analysis_text),
+                "model_used": model_name
             }
         }
 
@@ -225,7 +290,10 @@ def extract_drawing_annotations(image_path: str) -> Dict[str, Any]:
     Returns:
         Dict包含：
         - success: bool
-        - data: {annotations: [{text, type, location}]}
+        - data: {
+            annotations_file: str,  # 标注文件路径
+            summary: dict           # 统计摘要
+          }
         - error: str
     """
     try:
@@ -239,10 +307,15 @@ def extract_drawing_annotations(image_path: str) -> Dict[str, Any]:
         if not result["success"]:
             return result
 
+        # 已经保存到文件，只返回摘要
         return {
             "success": True,
             "data": {
-                "annotations": result["data"]["analysis_text"],
+                "annotations_file": result["data"]["analysis_file"],
+                "summary": {
+                    "key_annotations": result["data"]["key_findings"],
+                    "preview": result["data"]["summary"]
+                },
                 "image_path": image_path
             }
         }

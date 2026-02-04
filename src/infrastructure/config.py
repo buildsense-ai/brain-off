@@ -49,6 +49,10 @@ class Settings(BaseSettings):
         default="https://api.moonshot.cn/v1",
         alias="VISION_MODEL_BASE_URL"
     )
+    vision_model_name: str = Field(
+        default="kimi-k2.5",
+        alias="VISION_MODEL_NAME"
+    )
 
     class Config:
         env_file = ".env"

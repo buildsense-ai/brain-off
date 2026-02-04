@@ -291,7 +291,7 @@ def extract_cad_entities(
         import json
         from datetime import datetime
 
-        output_dir = Path("workspace/cost/notes")
+        output_dir = Path("workspace/supervision/notes")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # 生成文件名
@@ -450,7 +450,7 @@ def calculate_cad_measurements(
         import json
         from datetime import datetime
 
-        output_dir = Path("workspace/cost/notes")
+        output_dir = Path("workspace/supervision/notes")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
