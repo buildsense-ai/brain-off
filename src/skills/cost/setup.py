@@ -19,8 +19,7 @@ from src.core.skills.tool_registry import get_tool_registry
 # 导入 Kimi Agent 工具函数
 from services.kimi_agent_tools import (
     get_cad_metadata,
-    get_cad_regions,
-    render_cad_region,
+    inspect_region,
     extract_cad_entities,
     convert_dwg_to_dxf,
     list_files,
@@ -57,7 +56,7 @@ def check_environment_variables():
 
 
 def initialize_cost_tools():
-    """初始化 Cost Skill 的 9 个 Kimi Agent 工具"""
+    """初始化 Cost Skill 的 8 个 Kimi Agent 工具"""
     # 检查环境变量
     if not check_environment_variables():
         print("⚠️  [Cost Skill] 环境变量未配置，部分功能可能无法使用")
@@ -67,8 +66,7 @@ def initialize_cost_tools():
     # 工具函数映射
     tool_functions = {
         "get_cad_metadata": get_cad_metadata,
-        "get_cad_regions": get_cad_regions,
-        "render_cad_region": render_cad_region,
+        "inspect_region": inspect_region,
         "extract_cad_entities": extract_cad_entities,
         "convert_dwg_to_dxf": convert_dwg_to_dxf,
         "list_files": list_files,
@@ -99,15 +97,20 @@ def initialize_cost_tools():
             "success": "✓ 图纸信息已获取",
             "error": "✗ 读取失败: {error}"
         },
-        "render_cad_region": {
-            "calling": "渲染图纸区域",
-            "success": "✓ 渲染完成",
-            "error": "✗ 渲染失败: {error}"
+        "inspect_region": {
+            "calling": "检查图纸区域",
+            "success": "✓ 已检查区域（图片+数据）",
+            "error": "✗ 检查失败: {error}"
         },
         "extract_cad_entities": {
             "calling": "提取实体数据",
             "success": "✓ 提取完成",
             "error": "✗ 提取失败: {error}"
+        },
+        "convert_dwg_to_dxf": {
+            "calling": "转换DWG文件",
+            "success": "✓ 已转换为DXF",
+            "error": "✗ 转换失败: {error}"
         }
     }
 

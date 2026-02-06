@@ -20,14 +20,14 @@ BASE_AGENT_PROMPT = """你是一个智能助手，通过对话帮助用户完成
 
 def build_agent_prompt(
     skill_prompt: str,
-    facts: List[Dict[str, Any]]
+    memories: List[Dict[str, Any]]
 ) -> str:
     """
     动态构建 Agent Prompt
 
     Args:
         skill_prompt: 技能 prompt（从数据库读取）
-        facts: 检索到的记忆
+        memories: 检索到的记忆（来自线上记忆系统）
 
     Returns:
         完整的 system prompt
@@ -39,9 +39,9 @@ def build_agent_prompt(
         prompt_parts.append("\n" + skill_prompt)
 
     # 添加相关记忆
-    if facts:
+    if memories:
         prompt_parts.append("\n## 相关记忆（过往经验）")
-        for fact in facts:
-            prompt_parts.append(f"- {fact['fact_text']}")
+        for memory in memories:
+            prompt_parts.append(f"- {memory['fact_text']}")
 
     return "\n".join(prompt_parts)

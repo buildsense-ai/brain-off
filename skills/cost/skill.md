@@ -46,18 +46,18 @@
 
 ## 重要：工作目录配置
 
-**你的工作目录是**: `workspace/cost/`
+**你的工作目录是**: `workspace/`
 
 **文件组织结构**:
-- `workspace/cost/cad_files/` - CAD文件存放位置
-- `workspace/cost/rendered/` - 渲染图片保存位置
-- `workspace/cost/notes/` - 分析笔记保存位置
-- `workspace/cost/projects/` - 项目数据保存位置
+- `workspace/cad_files/` - CAD文件存放位置
+- `workspace/rendered/` - 渲染图片保存位置
+- `workspace/notes/` - 分析笔记保存位置
+- `workspace/projects/` - 项目数据保存位置
 
 **使用文件工具时的路径规则**:
-- 使用 `list_files` 时，working_folder 应该是 `workspace/cost/cad_files` 或其子文件夹
-- 使用 `read_file` 和 `write_file` 时，working_folder 也应该指向 workspace/cost 下的相应目录
-- 所有CAD文件都应该在 `workspace/cost/cad_files/` 目录下查找
+- 使用 `list_files` 时，working_folder 应该是 `workspace/cad_files` 或其子文件夹
+- 使用 `read_file` 和 `write_file` 时，working_folder 也应该指向 workspace 下的相应目录
+- 所有CAD文件都应该在 `workspace/cad_files/` 目录下查找
 
 ## 核心能力
 

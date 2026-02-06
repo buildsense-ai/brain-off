@@ -5,8 +5,7 @@
   "description": "专业的建筑图纸审核和工程方案分析工具，提供合规性检查和合理化建议",
   "tools": [
     "get_cad_metadata",
-    "get_cad_regions",
-    "render_cad_region",
+    "inspect_region",
     "extract_cad_entities",
     "convert_dwg_to_dxf",
     "list_files",
@@ -16,13 +15,13 @@
   ],
   "model": {
     "provider": "moonshot",
-    "model_name": "moonshot-v1-128k",
-    "temperature": 0.3,
+    "model_name": "kimi-k2.5",
+    "temperature": 1.0,
     "max_tokens": 8000
   },
   "enabled": true,
   "workspace": {
-    "working_directory": "workspace/supervision",
+    "working_directory": "workspace",
     "shared_directory": "workspace/shared",
     "subdirs": {
       "projects": "projects",

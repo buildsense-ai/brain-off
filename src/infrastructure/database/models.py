@@ -2,7 +2,7 @@
 SQLAlchemy models for the AI Task Manager application.
 
 模块化架构：
-- Core: Skill, MemSource, Fact (核心系统)
+- Core: Skill (核心系统)
 - Todo Skill: Task, Tag, TaskTag (Todo 技能的数据对象)
 """
 from datetime import datetime
@@ -56,65 +56,6 @@ class Skill(Base):
     # Indexes
     __table_args__ = (
         Index("idx_skills_name", "name"),
-    )
-
-
-class MemSource(Base):
-    """Memory source model - stores conversation history for compression."""
-    __tablename__ = "mem_source"
-
-    # Primary key
-    source_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    # Session info
-    session_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    turn: Mapped[int] = mapped_column(Integer, nullable=False)
-    speaker: Mapped[str] = mapped_column(String(50), nullable=False)
-
-    # Content
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    tool_calls: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    tool_results: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-
-    # AI fields
-    embedding: Mapped[Optional[list]] = mapped_column(Vector(1024), nullable=True)
-
-    # Temporal fields
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    # Indexes
-    __table_args__ = (
-        Index("idx_mem_source_session", "session_id"),
-        Index("idx_mem_source_created", "created_at"),
-    )
-
-
-class Fact(Base):
-    """Fact model - stores extracted facts from conversations."""
-    __tablename__ = "facts"
-
-    # Primary key
-    fact_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    # Content
-    fact_text: Mapped[str] = mapped_column(Text, nullable=False)
-    source_ids: Mapped[Optional[list]] = mapped_column(ARRAY(Integer), nullable=True)
-
-    # Classification
-    fact_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    domain: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    confidence: Mapped[float] = mapped_column(Float, default=1.0, server_default="1.0")
-
-    # AI fields
-    embedding: Mapped[Optional[list]] = mapped_column(Vector(1024), nullable=True)
-
-    # Temporal fields
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    # Indexes
-    __table_args__ = (
-        Index("idx_facts_domain", "domain"),
-        Index("idx_facts_type", "fact_type"),
     )
 
 

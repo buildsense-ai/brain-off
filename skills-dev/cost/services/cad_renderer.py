@@ -14,23 +14,23 @@ from matplotlib.collections import LineCollection
 import numpy as np
 
 
-# 图层颜色映射
+# 图层颜色映射（白底配色方案）
 LAYER_COLOR_MAP = {
-    "WALL": "#FF0000",      # 红色 - 墙体
-    "S_WALL": "#FF0000",    # 红色 - 墙体
+    "WALL": "#CC0000",      # 深红色 - 墙体
+    "S_WALL": "#CC0000",    # 深红色 - 墙体
     "COLUMN": "#FF6600",    # 橙色 - 柱子
-    "WINDOW": "#00CCFF",    # 青色 - 门窗
-    "E_WINDOW": "#00CCFF",  # 青色 - 门窗
-    "DIM": "#0000FF",       # 蓝色 - 标注
-    "PUB_DIM": "#0000FF",   # 蓝色 - 标注
-    "TEXT": "#00AA00",      # 绿色 - 文字
-    "PUB_TEXT": "#00AA00",  # 绿色 - 文字
-    "AXIS": "#FFAA00",      # 黄色 - 轴线
-    "STAIR": "#FF00FF",     # 紫色 - 楼梯
-    "E_STAIR": "#FF00FF",   # 紫色 - 楼梯
+    "WINDOW": "#0099CC",    # 深青色 - 门窗
+    "E_WINDOW": "#0099CC",  # 深青色 - 门窗
+    "DIM": "#0000CC",       # 深蓝色 - 标注
+    "PUB_DIM": "#0000CC",   # 深蓝色 - 标注
+    "TEXT": "#008800",      # 深绿色 - 文字
+    "PUB_TEXT": "#008800",  # 深绿色 - 文字
+    "AXIS": "#CC8800",      # 深黄色 - 轴线
+    "STAIR": "#CC00CC",     # 深紫色 - 楼梯
+    "E_STAIR": "#CC00CC",   # 深紫色 - 楼梯
 }
 
-DEFAULT_COLOR = "#000000"  # 黑色 - 默认
+DEFAULT_COLOR = "#000000"  # 黑色 - 默认（白底上可见）
 
 
 def get_layer_color(layer_name: str) -> str:
@@ -84,10 +84,10 @@ def render_drawing_region(
         doc = ezdxf.readfile(file_path)
         msp = doc.modelspace()
 
-        # 生成输出路径
+        # 生成输出路径（统一输出到 workspace/rendered/）
         if not output_path:
-            output_dir = Path(file_path).parent / "rendered"
-            output_dir.mkdir(exist_ok=True)
+            output_dir = Path("workspace/rendered")
+            output_dir.mkdir(parents=True, exist_ok=True)
             filename = f"region_{int(bbox['x'])}_{int(bbox['y'])}_{int(bbox['width'])}_{int(bbox['height'])}.png"
             output_path = str(output_dir / filename)
 
@@ -105,8 +105,10 @@ def render_drawing_region(
         else:
             actual_width, actual_height = output_size
 
-        # 创建图形
+        # 创建图形（白底）
         fig, ax = plt.subplots(figsize=(actual_width/100, actual_height/100), dpi=100)
+        fig.patch.set_facecolor('white')  # 设置图形背景为白色
+        ax.set_facecolor('white')  # 设置坐标轴背景为白色
         ax.set_xlim(bbox['x'], bbox['x'] + bbox['width'])
         ax.set_ylim(bbox['y'], bbox['y'] + bbox['height'])
         ax.set_aspect('equal')
@@ -115,7 +117,7 @@ def render_drawing_region(
         # 渲染实体
         _render_entities(ax, msp, bbox, layers, color_mode)
 
-        # 保存
+        # 保存（白底）
         plt.tight_layout(pad=0)
         plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0, facecolor='white')
 

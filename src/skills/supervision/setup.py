@@ -20,8 +20,7 @@ sys.path.insert(0, str(cost_skill_path))
 
 from services.kimi_agent_tools import (
     get_cad_metadata,
-    get_cad_regions,
-    render_cad_region,
+    inspect_region,
     extract_cad_entities,
     convert_dwg_to_dxf,
     list_files,
@@ -55,7 +54,7 @@ def check_environment_variables():
 
 
 def initialize_supervision_tools():
-    """初始化 Supervision Skill 的 9 个工具"""
+    """初始化 Supervision Skill 的 8 个工具"""
     # 检查环境变量
     if not check_environment_variables():
         print("⚠️  [Supervision Skill] 环境变量未配置，部分功能可能无法使用")
@@ -65,8 +64,7 @@ def initialize_supervision_tools():
     # 工具函数映射
     tool_functions = {
         "get_cad_metadata": get_cad_metadata,
-        "get_cad_regions": get_cad_regions,
-        "render_cad_region": render_cad_region,
+        "inspect_region": inspect_region,
         "extract_cad_entities": extract_cad_entities,
         "convert_dwg_to_dxf": convert_dwg_to_dxf,
         "list_files": list_files,
@@ -75,37 +73,47 @@ def initialize_supervision_tools():
         "append_to_file": append_to_file
     }
 
-    # 工具可视化模板（与 cost skill 相同）
+    # 工具可视化模板
     tool_visualizations = {
         "list_files": {
-            "calling": "查看文件 ({working_folder})",
-            "success": "✓ 找到 {file_count} 个文件",
-            "error": "✗ 查看文件失败: {error}"
+            "calling": "查看文件",
+            "success": "✓ 找到文件",
+            "error": "✗ 查看文件失败"
         },
         "read_file": {
-            "calling": "读取文件 ({file_path})",
+            "calling": "读取文件",
             "success": "✓ 文件已读取",
-            "error": "✗ 读取失败: {error}"
+            "error": "✗ 读取失败"
         },
         "write_file": {
-            "calling": "写入文件 ({file_path})",
+            "calling": "写入文件",
             "success": "✓ 文件已保存",
-            "error": "✗ 写入失败: {error}"
+            "error": "✗ 写入失败"
+        },
+        "append_to_file": {
+            "calling": "记录工作日志",
+            "success": "✓ 日志已记录",
+            "error": "✗ 记录失败"
         },
         "get_cad_metadata": {
-            "calling": "读取图纸信息 ({file_path})",
+            "calling": "读取图纸信息",
             "success": "✓ 图纸信息已获取",
-            "error": "✗ 读取失败: {error}"
+            "error": "✗ 读取失败"
         },
-        "render_cad_region": {
-            "calling": "渲染图纸区域",
-            "success": "✓ 渲染完成",
-            "error": "✗ 渲染失败: {error}"
+        "inspect_region": {
+            "calling": "检查图纸区域",
+            "success": "✓ 已检查区域（图片+数据）",
+            "error": "✗ 检查失败"
         },
         "extract_cad_entities": {
             "calling": "提取实体数据",
-            "success": "✓ 提取完成",
-            "error": "✗ 提取失败: {error}"
+            "success": "✓ 已提取实体数据",
+            "error": "✗ 提取失败"
+        },
+        "convert_dwg_to_dxf": {
+            "calling": "转换DWG文件",
+            "success": "✓ 已转换为DXF",
+            "error": "✗ 转换失败"
         }
     }
 

@@ -128,6 +128,13 @@ class ChatInterface:
             return True
 
         elif command == "/clear":
+            # 删除旧的 session（避免内存泄漏）
+            if self.session_id and self.agent:
+                from src.core.agent.state import get_session_manager
+                session_manager = get_session_manager()
+                from uuid import UUID
+                session_manager.delete_session(UUID(self.session_id))
+
             self.session_id = None
             self.message_count = 0
             print("\n✓ 对话历史已清除\n")
@@ -251,8 +258,6 @@ class ChatInterface:
             except Exception as e:
                 print(f"\n❌ 发生错误: {str(e)}")
                 await db.rollback()
-            finally:
-                break
 
 
 def main():

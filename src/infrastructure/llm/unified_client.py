@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from openai import AsyncOpenAI
 import os
 from dotenv import load_dotenv
+import httpx
 
 load_dotenv()
 
@@ -43,9 +44,16 @@ class UnifiedLLMClient:
             self.supports_vision = False
         
         elif provider == "moonshot":
+            # 创建不使用代理的 httpx 客户端
+            import httpx
+            http_client = httpx.AsyncClient(
+                timeout=300.0,
+                trust_env=False  # 不读取环境变量中的代理配置
+            )
             self.client = AsyncOpenAI(
                 api_key=os.getenv("VISION_MODEL_API_KEY"),
-                base_url=os.getenv("VISION_MODEL_BASE_URL", "https://api.moonshot.cn/v1")
+                base_url=os.getenv("VISION_MODEL_BASE_URL", "https://api.moonshot.cn/v1"),
+                http_client=http_client
             )
             self.model = model_name or os.getenv("VISION_MODEL_NAME", "kimi-k2.5")
             self.supports_vision = True

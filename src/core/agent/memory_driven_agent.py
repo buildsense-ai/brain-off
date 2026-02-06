@@ -50,7 +50,7 @@ class MemoryDrivenAgent:
         self.filter_service = FilterService()
 
         # 线上记忆适配器
-        self.online_memory_adapter = OnlineMemoryAdapter(enabled=True)
+        self.online_memory_adapter = OnlineMemoryAdapter(enabled=False)  # 临时禁用线上记忆
 
         # 工具注册表
         self.tool_registry = get_tool_registry()
@@ -354,10 +354,20 @@ class MemoryDrivenAgent:
 
         # 添加对话历史
         for msg in state.conversation_history:
-            messages.append({
+            message_dict = {
                 "role": msg.role,
                 "content": msg.content
-            })
+            }
+
+            # 保留 tool_calls（assistant 消息）
+            if msg.tool_calls:
+                message_dict["tool_calls"] = msg.tool_calls
+
+            # 保留 tool_call_id（tool 消息）
+            if msg.tool_call_id:
+                message_dict["tool_call_id"] = msg.tool_call_id
+
+            messages.append(message_dict)
 
         return messages
 
@@ -378,16 +388,16 @@ class MemoryDrivenAgent:
         """
         from src.core.agent.prompts import build_agent_prompt
 
-        # 将线上记忆转换为 facts 格式
-        all_facts = []
+        # 将线上记忆转换为统一格式
+        memories = []
         if online_memories:
             for mem in online_memories:
-                all_facts.append({
+                memories.append({
                     "fact_text": mem["content"],
                     "source": mem.get("source", "online_memory")
                 })
 
-        return build_agent_prompt(skill_prompt, all_facts)
+        return build_agent_prompt(skill_prompt, memories)
 
     async def _agent_loop(
         self,
@@ -458,7 +468,7 @@ class MemoryDrivenAgent:
             # 添加助手消息到消息列表
             assistant_message = {
                 "role": "assistant",
-                "content": content,
+                "content": content if content else None,  # 空字符串转为 None
                 "tool_calls": [
                     {
                         "id": tc.id,
@@ -488,6 +498,10 @@ class MemoryDrivenAgent:
 
             # 保存到会话状态
             state.add_message("assistant", content, tool_calls=tool_calls)
+
+            # 保存 tool 结果消息
+            for tool_call, result in zip(tool_calls, tool_results):
+                state.add_message("tool", json.dumps(result, ensure_ascii=False), tool_call_id=tool_call.id)
 
         return {
             "text": accumulated_text,
@@ -531,6 +545,19 @@ class MemoryDrivenAgent:
                 db=self.db,
                 **arguments
             )
+
+            # 特殊处理：如果是渲染工具，将图片编码为base64让AI能看到
+            if function_name == "render_cad_region" and result.get("success"):
+                image_path = result.get("data", {}).get("image_path")
+                if image_path:
+                    try:
+                        import base64
+                        with open(image_path, "rb") as f:
+                            image_base64 = base64.b64encode(f.read()).decode('utf-8')
+                        result["data"]["image_base64"] = image_base64
+                        debug_print(f"[Agent] 已将图片编码为base64: {image_path}")
+                    except Exception as e:
+                        debug_print(f"[Agent] 图片编码失败: {e}")
 
             # 输出工具结果可视化
             if stream_callback:
